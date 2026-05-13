@@ -4,9 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Megami Device Radar Chart</title>
+
+  <!-- Chart.js library for rendering the radar chart -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
   <style>
     :root {
+      /* Core color palette (EGA-inspired orange/red theme) */
       --bg: #14110d;
       --bg-2: #20170f;
       --panel: #251b12;
@@ -173,9 +177,11 @@
 </head>
 <body>
   <div class="wrap">
+
     <h1 id="title">Megami Device Radar Chart</h1>
 
     <div class="grid">
+
       <section class="card chart-card">
         <canvas id="radar"></canvas>
       </section>
@@ -184,13 +190,14 @@
         <div class="name-pill">
           <span id="name">Unnamed Megami</span>
         </div>
-
         <div class="stat-list" id="statList"></div>
       </aside>
+
     </div>
   </div>
 
 <script>
+
 const AXES = [
   { key: 'sra', short: 'SRA', label: 'Short Range Attack' },
   { key: 'mra', short: 'MRA', label: 'Mid Range Attack' },
@@ -204,7 +211,9 @@ const AXES = [
   { key: 'grm', short: 'GRM', label: 'Ground Mobility' }
 ];
 
-function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
+function clamp(n, min, max) {
+  return Math.min(max, Math.max(min, n));
+}
 
 function parseStat(v) {
   if (v == null || v === '') return 10;
@@ -224,7 +233,7 @@ let chart;
 let data;
 
 function updateRadar() {
-  chart.data.datasets[0].data = AXES.map(a => data[a.key] / 10);
+  chart.data.datasets[0].data = AXES.map(a => data[a.key]);
   chart.update();
 }
 
@@ -235,17 +244,52 @@ function render() {
   const list = document.getElementById('statList');
   list.innerHTML = AXES.map(a => {
     const v = data[a.key];
-    const pct = v;
     return `
       <div class="stat-row">
         <div class="abbr">${a.short}</div>
         <div class="label">${a.label}</div>
         <div class="value">${v}</div>
-        <div class="bar"><span style="--w:${pct}%"></span></div>
+        <div class="bar"><span style="--w:${v}%"></span></div>
       </div>
     `;
   }).join('');
 }
+
+// ============================================================
+// CENTER OVERLAY PLUGIN
+// Draws a central mask circle over the radar chart to
+// visually obscure the inner “low-value / negative-feel” zone
+// ============================================================
+const centerCirclePlugin = {
+  id: 'centerCircleMask',
+
+  beforeDraw(chart) {
+    const { ctx, chartArea } = chart;
+    if (!chartArea) return;
+
+    // Find center point of radar
+    const x = (chartArea.left + chartArea.right) / 2;
+    const y = (chartArea.top + chartArea.bottom) / 2;
+
+    // Radius scales with chart size (keeps proportion consistent)
+    const radius = Math.min(
+      chartArea.right - chartArea.left,
+      chartArea.bottom - chartArea.top
+    ) * 0.1;
+
+    ctx.save();
+
+    // Draw circular mask over center
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+
+    // Fill with background color to “erase” underlying area
+    ctx.fillStyle = '#ff3434';
+    ctx.fill();
+
+    ctx.restore();
+  }
+};
 
 function init() {
   data = getParams();
@@ -255,16 +299,15 @@ function init() {
     data: {
       labels: AXES.map(a => a.short),
       datasets: [{
-        data: AXES.map(a => data[a.key] / 10),
+        data: AXES.map(a => data[a.key]),
         borderColor: '#ff3434',
-        backgroundColor: 'rgba(255, 52, 52, 0.30)',
+        backgroundColor: 'rgba(255, 52, 52, 0.90)',
         pointBackgroundColor: '#ff3434',
         pointBorderColor: '#ff9d1f',
-        pointRadius: 4,
-        pointHoverRadius: 5,
+        pointRadius: 0,
+        pointHoverRadius: 0,
         borderWidth: 3,
-        fill: true,
-        tension: 0
+        fill: true
       }]
     },
     options: {
@@ -276,9 +319,9 @@ function init() {
       scales: {
         r: {
           min: 0,
-          max: 10,
+          max: 100,
           ticks: {
-            stepSize: 2,
+            stepSize: 10,
             display: false
           },
           angleLines: {
@@ -287,7 +330,17 @@ function init() {
             lineWidth: 1.5
           },
           grid: {
-            color: 'rgba(255, 157, 31, 0.55)',
+            color: (ctx) => {
+              const v = ctx.tick.value;
+              if (v === 50) return 'rgba(255, 190, 60, 1)';
+              if (v === 100) return 'rgba(255, 210, 120, 1)';
+              return 'rgba(255, 157, 31, 0.45)';
+            },
+            lineWidth: (ctx) => {
+              const v = ctx.tick.value;
+              if (v === 50 || v === 100) return 3;
+              return 1.5;
+            },
             circular: true
           },
           pointLabels: {
@@ -300,7 +353,10 @@ function init() {
           }
         }
       }
-    }
+    },
+
+    // Register overlay plugin
+    plugins: [centerCirclePlugin]
   });
 
   render();
