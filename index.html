@@ -5,12 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Megami Device Radar Chart</title>
 
-  <!-- Chart.js library for rendering the radar chart -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <style>
     :root {
-      /* Core color palette (EGA-inspired orange/red theme) */
       --bg: #14110d;
       --bg-2: #20170f;
       --panel: #251b12;
@@ -77,6 +75,7 @@
       background:
         linear-gradient(180deg, rgba(255, 157, 31, 0.04), transparent 30%),
         linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+      position: relative;
     }
 
     .side-card {
@@ -162,18 +161,6 @@
       font-family: "Courier New", "Lucida Console", "IBM Plex Mono", monospace;
     }
 
-    /* White spinner arrows for number inputs */
-    .value::-webkit-outer-spin-button,
-    .value::-webkit-inner-spin-button {
-      opacity: 1;
-      filter: invert(1);
-    }
-
-    .value[type=number] {
-      appearance: auto;
-      -moz-appearance: textfield;
-    }
-
     .bar {
       grid-column: 2 / 4;
       height: 10px;
@@ -230,37 +217,57 @@
       height: 640px !important;
     }
 
+    /* TOTAL MOVED INTO RADAR PANEL */
+    #totalBox {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(255, 157, 31, 0.12);
+      border: 1px solid rgba(255, 157, 31, 0.38);
+      color: var(--accent-2);
+      font-family: "Courier New", "Lucida Console", "IBM Plex Mono", monospace;
+      font-weight: 700;
+      padding: 8px 12px;
+      border-radius: 12px;
+      z-index: 5;
+      letter-spacing: 0.05em;
+    }
+
     @media (max-width: 980px) {
       .grid { grid-template-columns: 1fr; }
       .chart-card { min-height: 520px; }
     }
   </style>
 </head>
+
 <body>
-  <div class="wrap">
 
-    <h1 id="title">Megami Device Radar Chart</h1>
+<div class="wrap">
 
-    <div class="grid">
+  <h1 id="title">Megami Device Radar Chart</h1>
 
-      <section class="card chart-card">
-        <canvas id="radar"></canvas>
-      </section>
+  <div class="grid">
 
-      <aside class="card side-card">
-        <div class="name-pill">
-          <input id="nameInput" type="text" value="Unnamed Megami" />
-        </div>
-        <div class="stat-list" id="statList"></div>
+    <section class="card chart-card">
+      <div id="totalBox"></div>
+      <canvas id="radar"></canvas>
+    </section>
 
-        <div id="urlBox">
-          <div class="url-label">SHARE URL</div>
-          <textarea id="shareUrl" readonly></textarea>
-        </div>
-      </aside>
+    <aside class="card side-card">
+      <div class="name-pill">
+        <input id="nameInput" type="text" value="Unnamed Megami" />
+      </div>
 
-    </div>
+      <div class="stat-list" id="statList"></div>
+
+      <div id="urlBox">
+        <div class="url-label">SHARE URL</div>
+        <textarea id="shareUrl" readonly></textarea>
+      </div>
+    </aside>
+
   </div>
+</div>
 
 <script>
 
@@ -303,34 +310,27 @@ function updateRadar() {
   chart.update();
 }
 
-// ============================================================
-// Builds a shareable URL containing all current stats
-// ============================================================
 function updateShareURL() {
   const params = new URLSearchParams();
-
   params.set('name', data.name);
-
-  AXES.forEach(a => {
-    params.set(a.key, data[a.key]);
-  });
-
+  AXES.forEach(a => params.set(a.key, data[a.key]));
   const url = `${location.origin}${location.pathname}?${params.toString()}`;
-
   document.getElementById('shareUrl').value = url;
 }
 
-// ============================================================
-// Updates visual widths of all stat bars without rebuilding DOM
-// ============================================================
 function updateBars() {
   document.querySelectorAll('.stat-input').forEach(input => {
     const key = input.dataset.key;
     const row = input.closest('.stat-row');
     const span = row.querySelector('.bar span');
-
     span.style.setProperty('--w', `${data[key]}%`);
   });
+}
+
+/* TOTAL */
+function updateTotal() {
+  const total = AXES.reduce((sum, a) => sum + (data[a.key] || 0), 0);
+  document.getElementById('totalBox').textContent = `TOTAL: ${total}`;
 }
 
 function render() {
@@ -344,75 +344,52 @@ function render() {
       <div class="stat-row">
         <div class="abbr">${a.short}</div>
         <div class="label">${a.label}</div>
-        <input
-          class="value stat-input"
-          type="number"
-          min="0"
-          max="100"
-          value="${v}"
-          data-key="${a.key}"
-        />
+        <input class="value stat-input" type="number" min="0" max="100"
+          value="${v}" data-key="${a.key}" />
         <div class="bar"><span style="--w:${v}%"></span></div>
       </div>
     `;
   }).join('');
 
-  // Bind stat input listeners
   document.querySelectorAll('.stat-input').forEach(input => {
     input.addEventListener('input', () => {
       const key = input.dataset.key;
       data[key] = clamp(Number(input.value) || 0, 0, 100);
 
-      // Update only visuals and URL to avoid recursive re-render loops
       updateRadar();
       updateBars();
       updateShareURL();
+      updateTotal();
     });
   });
 
-  // Bind editable name field
   document.getElementById('nameInput').addEventListener('input', (e) => {
     data.name = e.target.value || 'Unnamed Megami';
-
-    // Update title + URL only without full rerender
     document.getElementById('title').textContent = `${data.name} — STATS`;
     updateShareURL();
+    updateTotal();
   });
 }
 
-// ============================================================
-// CENTER OVERLAY PLUGIN
-// Draws a central mask circle OVER the radar chart (on top of
-// data + grid), ensuring it visually sits above all rendering
-// ============================================================
 const centerCirclePlugin = {
   id: 'centerCircleMask',
-
-  // afterDraw ensures this renders on TOP of everything
   afterDraw(chart) {
     const { ctx, chartArea } = chart;
     if (!chartArea) return;
 
-    // Compute chart center
     const x = (chartArea.left + chartArea.right) / 2;
     const y = (chartArea.top + chartArea.bottom) / 2;
 
-    // Radius scales with chart size
     const radius = Math.min(
       chartArea.right - chartArea.left,
       chartArea.bottom - chartArea.top
     ) * 0.08;
 
     ctx.save();
-
-    // Draw overlay circle ON TOP of chart content
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, Math.PI * 2);
-
-    // Solid fill acts as a “blocking” visual layer
     ctx.fillStyle = 'rgba(255, 157, 31, 1)';
     ctx.fill();
-
     ctx.restore();
   }
 };
@@ -439,17 +416,12 @@ function init() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }
-      },
+      plugins: { legend: { display: false } },
       scales: {
         r: {
           min: -20,
           max: 100,
-          ticks: {
-            stepSize: 10,
-            display: false
-          },
+          ticks: { stepSize: 10, display: false },
           angleLines: {
             color: '#ff3434',
             borderDash: [4, 4],
@@ -458,14 +430,12 @@ function init() {
           grid: {
             color: (ctx) => {
               const v = ctx.tick.value;
-              if (v === 50) return 'rgba(255, 157, 31, 0.90)';
-              if (v === 100) return 'rgba(255, 157, 31, 0.90)';
+              if (v === 50 || v === 100) return 'rgba(255, 157, 31, 0.90)';
               return 'rgba(255, 157, 31, 0.45)';
             },
             lineWidth: (ctx) => {
               const v = ctx.tick.value;
-              if (v === 50 || v === 100) return 3;
-              return 1.5;
+              return (v === 50 || v === 100) ? 3 : 1.5;
             },
             circular: true
           },
@@ -480,8 +450,6 @@ function init() {
         }
       }
     },
-
-    // Register overlay plugin
     plugins: [centerCirclePlugin]
   });
 
@@ -489,9 +457,11 @@ function init() {
   updateRadar();
   updateBars();
   updateShareURL();
+  updateTotal();
 }
 
 init();
 </script>
+
 </body>
 </html>
