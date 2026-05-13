@@ -92,8 +92,8 @@
       display: inline-flex;
       align-items: center;
       gap: 10px;
-      width: fit-content;
-      padding: 10px 14px;
+      width: 100%;
+      padding: 6px 12px;
       background: rgba(255, 157, 31, 0.12);
       border: 1px solid rgba(255, 157, 31, 0.38);
       border-radius: 999px;
@@ -101,6 +101,22 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.04em;
+    }
+
+    #nameInput {
+      width: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--accent-2);
+      font-family: "Courier New", "Lucida Console", "IBM Plex Mono", monospace;
+      font-size: 16px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    #nameInput::placeholder {
+      color: rgba(255, 191, 77, 0.5);
     }
 
     .stat-list {
@@ -164,6 +180,34 @@
       box-shadow: 0 0 12px rgba(255, 157, 31, 0.25);
     }
 
+    #urlBox {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .url-label {
+      color: var(--accent);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      font-size: 13px;
+    }
+
+    #shareUrl {
+      width: 100%;
+      min-height: 90px;
+      resize: vertical;
+      background: rgba(255, 157, 31, 0.08);
+      border: 1px solid rgba(255, 157, 31, 0.18);
+      border-radius: 12px;
+      color: var(--text);
+      padding: 12px;
+      font-family: "Courier New", "Lucida Console", "IBM Plex Mono", monospace;
+      font-size: 13px;
+      line-height: 1.4;
+      outline: none;
+    }
+
     canvas {
       width: 100% !important;
       height: 640px !important;
@@ -188,9 +232,14 @@
 
       <aside class="card side-card">
         <div class="name-pill">
-          <span id="name">Unnamed Megami</span>
+          <input id="nameInput" type="text" value="Unnamed Megami" />
         </div>
         <div class="stat-list" id="statList"></div>
+
+        <div id="urlBox">
+          <div class="url-label">SHARE URL</div>
+          <textarea id="shareUrl" readonly></textarea>
+        </div>
       </aside>
 
     </div>
@@ -237,9 +286,39 @@ function updateRadar() {
   chart.update();
 }
 
+// ============================================================
+// Builds a shareable URL containing all current stats
+// ============================================================
+function updateShareURL() {
+  const params = new URLSearchParams();
+
+  params.set('name', data.name);
+
+  AXES.forEach(a => {
+    params.set(a.key, data[a.key]);
+  });
+
+  const url = `${location.origin}${location.pathname}?${params.toString()}`;
+
+  document.getElementById('shareUrl').value = url;
+}
+
+// ============================================================
+// Updates visual widths of all stat bars without rebuilding DOM
+// ============================================================
+function updateBars() {
+  document.querySelectorAll('.stat-input').forEach(input => {
+    const key = input.dataset.key;
+    const row = input.closest('.stat-row');
+    const span = row.querySelector('.bar span');
+
+    span.style.setProperty('--w', `${data[key]}%`);
+  });
+}
+
 function render() {
   document.getElementById('title').textContent = `${data.name} — STATS`;
-  document.getElementById('name').textContent = data.name;
+  document.getElementById('nameInput').value = data.name;
 
   const list = document.getElementById('statList');
   list.innerHTML = AXES.map(a => {
@@ -248,11 +327,40 @@ function render() {
       <div class="stat-row">
         <div class="abbr">${a.short}</div>
         <div class="label">${a.label}</div>
-        <div class="value">${v}</div>
+        <input
+          class="value stat-input"
+          type="number"
+          min="0"
+          max="100"
+          value="${v}"
+          data-key="${a.key}"
+        />
         <div class="bar"><span style="--w:${v}%"></span></div>
       </div>
     `;
   }).join('');
+
+  // Bind stat input listeners
+  document.querySelectorAll('.stat-input').forEach(input => {
+    input.addEventListener('input', () => {
+      const key = input.dataset.key;
+      data[key] = clamp(Number(input.value) || 0, 0, 100);
+
+      // Update only visuals and URL to avoid recursive re-render loops
+      updateRadar();
+      updateBars();
+      updateShareURL();
+    });
+  });
+
+  // Bind editable name field
+  document.getElementById('nameInput').addEventListener('input', (e) => {
+    data.name = e.target.value || 'Unnamed Megami';
+
+    // Update title + URL only without full rerender
+    document.getElementById('title').textContent = `${data.name} — STATS`;
+    updateShareURL();
+  });
 }
 
 // ============================================================
@@ -362,6 +470,8 @@ function init() {
 
   render();
   updateRadar();
+  updateBars();
+  updateShareURL();
 }
 
 init();
