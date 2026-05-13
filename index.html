@@ -19,8 +19,8 @@
       --muted: #d8a35c;
       --accent: #ff9d1f;
       --accent-2: #ffbf4d;
-      --grid: rgba(255, 157, 31, 0.42);
-      --grid-soft: rgba(255, 157, 31, 0.22);
+      --grid: #ffd8a3;
+      --grid-soft: #ffd8a3;
       --line: rgba(255, 52, 52, 0.98);
       --fill: rgba(255, 52, 52, 0.28);
       --bar: linear-gradient(90deg, #ff9d1f 0%, #ffbf4d 100%);
@@ -257,11 +257,6 @@ function render() {
 
 // ============================================================
 // CENTER OVERLAY PLUGIN
-// Draws a central mask circle over the radar chart to
-// visually obscure the inner “low-value / negative-feel” zone
-// ============================================================
-// ============================================================
-// CENTER OVERLAY PLUGIN
 // Draws a central mask circle OVER the radar chart (on top of
 // data + grid), ensuring it visually sits above all rendering
 // ============================================================
@@ -281,7 +276,7 @@ const centerCirclePlugin = {
     const radius = Math.min(
       chartArea.right - chartArea.left,
       chartArea.bottom - chartArea.top
-    ) * 0.1;
+    ) * 0.08;
 
     ctx.save();
 
@@ -307,7 +302,7 @@ function init() {
       datasets: [{
         data: AXES.map(a => data[a.key]),
         borderColor: '#ff3434',
-        backgroundColor: 'rgba(255, 52, 52, 0.90)',
+        backgroundColor: '#ff3434',
         pointBackgroundColor: '#ff3434',
         pointBorderColor: '#ff9d1f',
         pointRadius: 0,
@@ -331,15 +326,15 @@ function init() {
             display: false
           },
           angleLines: {
-            color: 'rgba(255, 157, 31, 0.65)',
+            color: '#ff3434',
             borderDash: [4, 4],
             lineWidth: 1.5
           },
           grid: {
             color: (ctx) => {
               const v = ctx.tick.value;
-              if (v === 50) return 'rgba(255, 190, 60, 1)';
-              if (v === 100) return 'rgba(255, 210, 120, 1)';
+              if (v === 50) return 'rgba(255, 157, 31, 0.90)';
+              if (v === 100) return 'rgba(255, 157, 31, 0.90)';
               return 'rgba(255, 157, 31, 0.45)';
             },
             lineWidth: (ctx) => {
