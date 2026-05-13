@@ -273,25 +273,13 @@ function init() {
       plugins: {
         legend: { display: false }
       },
-      elements: {
-        line: {
-          borderJoinStyle: 'miter'
-        }
-      },
       scales: {
         r: {
           min: 0,
           max: 10,
           ticks: {
             stepSize: 2,
-            color: 'rgba(255, 191, 77, 0.82)',
-            backdropColor: 'transparent',
-            showLabelBackdrop: false,
-            font: {
-              family: 'Courier New, Lucida Console, IBM Plex Mono, monospace',
-              size: 12,
-              weight: '700'
-            }
+            display: false
           },
           angleLines: {
             color: 'rgba(255, 157, 31, 0.65)',
@@ -300,8 +288,6 @@ function init() {
           },
           grid: {
             color: 'rgba(255, 157, 31, 0.55)',
-            borderDash: [6, 4],
-            lineWidth: 1.5,
             circular: true
           },
           pointLabels: {
