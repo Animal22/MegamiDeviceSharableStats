@@ -280,14 +280,13 @@ function init() {
       },
       scales: {
         r: {
-          min: -2,
-          max: 8,
+          min: 0,
+          max: 10,
           ticks: {
-            stepSize: 1,
-            color: 'rgba(255, 191, 77, 0)',
+            stepSize: 2,
+            color: 'rgba(255, 191, 77, 0.82)',
             backdropColor: 'transparent',
             showLabelBackdrop: false,
-            display: false,
             font: {
               family: 'Courier New, Lucida Console, IBM Plex Mono, monospace',
               size: 12,
@@ -300,48 +299,9 @@ function init() {
             lineWidth: 1.5
           },
           grid: {
-            color: (ctx) => {
-              const value = ctx.tick.value;
-
-              /* WARNING LINE MOVED TO 0 ONLY */
-              if (value === 0) {
-                return 'rgba(255, 45, 45, 1)';
-              }
-
-              /* 50/100 emphasis ring */
-              if (value === 3) {
-                return 'rgba(255, 190, 60, 1)';
-              }
-
-              /* 100/100 emphasis ring */
-              if (value === 8) {
-                return 'rgba(255, 210, 120, 1)';
-              }
-
-              return 'rgba(255, 157, 31, 0.55)';
-            },
-            borderDash: (ctx) => {
-              const value = ctx.tick.value;
-
-              if (value === 0 || value === 3 || value === 8) {
-                return [];
-              }
-
-              return [6, 4];
-            },
-            lineWidth: (ctx) => {
-              const value = ctx.tick.value;
-
-              if (value === 0) {
-                return 4;
-              }
-
-              if (value === 3 || value === 8) {
-                return 3;
-              }
-
-              return 1.5;
-            },
+            color: 'rgba(255, 157, 31, 0.55)',
+            borderDash: [6, 4],
+            lineWidth: 1.5,
             circular: true
           },
           pointLabels: {
